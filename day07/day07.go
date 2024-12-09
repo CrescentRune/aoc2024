@@ -24,45 +24,58 @@ func main() {
 
     rows := parseInput(input) 
     
-    p1 := findSumOfCorrectRows(rows)
+    p1, p2 := findSumOfCorrectRows(rows)
 
     fmt.Printf("Part 1 solution: %d\n", p1)
-   
-    
-    //fmt.Printf("Part 2 solution: %d\n", p2)
+    fmt.Printf("Part 2 solution: %d\n", p2)
 }
 
-func findSumOfCorrectRows(rows []*RowSet) int64 {
-    var sum int64 = 0
+func findSumOfCorrectRows(rows []*RowSet) (int64, int64) {
+    var sum, concatSum int64 = 0, 0
     for _, row := range(rows) {
-        if canMakeGoal(row.goal, row.values) {
+        if canMakeGoal(row.goal, row.values, false) {
             sum += row.goal   
+        } else if canMakeGoal(row.goal, row.values, true) {
+            concatSum += row.goal
+            //fmt.Printf("Row %d: %v could be made using concatenation!\n", row.goal, row.values)
         }
     }
 
-    return sum
+    return sum, sum + concatSum
 }
 
-func concatNumbers(left int64, right int64) int64 {
+func catNumbers(left int64, right int64) int64 {
     rightLen := len(strconv.FormatInt(right, 10))
     
     return left * int64(math.Pow10(rightLen)) + right
 }
 
-func canMakeGoal(goal int64, ops []int) bool {
+func canMakeGoal(goal int64, ops []int, allowCat bool) bool {
+    if allowCat {
+        return canMakeValP2(goal, int64(ops[0]), ops[1:])
+    }
     return canMakeVal(goal, int64(ops[0]), ops[1:])
 }
 
 func canMakeVal(goal int64, currentValue int64, ops []int) bool {
-    if (currentValue == 0) {
-        return canMakeVal(goal, int64(ops[0]), ops[1:]) || canMakeVal(goal, int64(ops[0]), ops[1:])
-    }
     if (len(ops) == 1) {
         return currentValue * int64(ops[0]) == goal || currentValue + int64(ops[0]) == goal 
     }
     return canMakeVal(goal, currentValue + int64(ops[0]), ops[1:]) ||
-            canMakeVal(goal, currentValue * int64(ops[0]), ops[1:]) //||
-            //canMakeVal(goal, concatNumbers(currentValue, int64(ops[0])), ops[1:])
+            canMakeVal(goal, currentValue * int64(ops[0]), ops[1:])
+}
+
+func canMakeValP2(goal int64, currentValue int64, ops []int) bool {
+    //fmt.Printf("Calling can make val for goal: %d, currentValue: %d, vals remaining: %v\n", goal, currentValue, ops)
+    if (len(ops) == 1) {
+     //   fmt.Printf("Reached the end!\n")
+        return currentValue * int64(ops[0]) == goal ||
+                currentValue + int64(ops[0]) == goal ||
+                catNumbers(currentValue, int64(ops[0])) == goal
+    }
+    return canMakeValP2(goal, currentValue + int64(ops[0]), ops[1:]) ||
+            canMakeValP2(goal, currentValue * int64(ops[0]), ops[1:]) ||
+            canMakeValP2(goal, catNumbers(currentValue, int64(ops[0])), ops[1:])
 }
 
 
