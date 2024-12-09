@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-var directions = [][]int{
+var directions = []Point{
 	{-1, 0},
 	{0, 1},
 	{1, 0},
@@ -27,8 +27,16 @@ var dirIndicator = []byte{
 	0b1000,
 }
 
+type Point struct {
+	row int
+	col int
+}
+
+var pointsTravelled = []string{}
+var pointsFound = []string{}
+
 func main() {
-	input, err := os.ReadFile("sample.txt")
+	input, err := os.ReadFile("input.txt")
 	if err != nil {
 		panic("File is bad. Womp womp")
 	}
@@ -36,59 +44,83 @@ func main() {
 	inputGrid := parseInput(input)
 	uniqueSteps, potentialLoops := calculateValues(inputGrid)
 
-	fmt.Printf("Part 1 solution: %d\n", uniqueSteps)
+	fmt.Printf("Part 1 solution: %d (actual 4819)\n", uniqueSteps)
 	fmt.Printf("Part 2 solution: %d\n", potentialLoops)
 }
 
 func calculateValues(grid [][]byte) (int, int) {
-	i, j := findStart(grid)
-	return traverseMaze(grid, -1, 0, i, j)
+	start := findStart(grid)
+	return traverseMaze(grid, 0, 0, start)
 }
 
-func traverseMaze(grid [][]byte, depth int, dir int, i int, j int) (int, int) {
-	bytesChanged := 0
-	loopsFound := 0
+func sumPoints(p1 Point, p2 Point) Point {
+	return Point{p1.row + p2.row, p1.col + p2.col}
+}
+
+func isInsideGrid(grid [][]byte, point Point) bool {
+	return point.row >= 0 && point.col >= 0 && point.row < len(grid) && point.col < len(grid[0])
+}
+
+func pointByte(grid [][]byte, point Point) byte {
+	return grid[point.row][point.col]
+}
+
+func markDirTraveled(grid [][]byte, point Point, dir int) {
+	curr := pointByte(grid, point)
+	if isTravelIndicator(curr) {
+		grid[point.row][point.col] |= dirIndicator[dir]
+	} else {
+		grid[point.row][point.col] = dirIndicator[dir]
+	}
+}
+
+func isTravelIndicator(indicator byte) bool {
+	return indicator > 0 && indicator <= 0b1111
+}
+
+func traverseMaze(grid [][]byte, depth int, dir int, pos Point) (int, int) {
+	traveled, loopsFound := 0, 0
 	for {
-		point := grid[i][j]
+		currIndicator := pointByte(grid, pos)
+		currIsTravel := isTravelIndicator(currIndicator)
 
-		if point > 0x0F {
-			grid[i][j] = dirIndicator[dir]
-			bytesChanged++
-		} else {
-			if (point & dirIndicator[dir]) == dirIndicator[dir] {
-				return -1, 0
-			}
-
-			grid[i][j] |= dirIndicator[dir]
+		// Loop detection escape
+		if depth > 0 && currIsTravel && currIndicator&dirIndicator[dir] != 0 {
+			return 0, 1
 		}
 
-		dI, dJ := i+directions[dir][0], j+directions[dir][1]
+		if !currIsTravel {
+			traveled++
+		}
 
-		if !isOutsideGrid(grid, dI, dJ) && grid[dI][dJ] == '#' {
+		markDirTraveled(grid, pos, dir)
+
+		//Start thinking about what's next
+		candPoint := sumPoints(pos, directions[dir])
+		if !isInsideGrid(grid, candPoint) {
+			return traveled, loopsFound
+		}
+		nextIndicator := pointByte(grid, candPoint)
+
+		if nextIndicator == '#' {
+			//Turn, then continue to rerun evaluation for new next
 			dir = (dir + 1) % len(directions)
-			grid[i][j] |= dirIndicator[dir]
+
+			continue
 		}
 
-		prevI, prevJ := i, j
-
-		i += directions[dir][0]
-		j += directions[dir][1]
-		if isOutsideGrid(grid, i, j) {
-			return bytesChanged, loopsFound
-		} else if depth < 1 {
-			testGrid := dupGrid(grid)
-			testGrid[prevI][prevJ] = '.'
-			testGrid[i][j] = '#'
-			path, _ := traverseMaze(testGrid, 1, dir, prevI, prevJ)
-			if path < 0 {
-				testGrid[i][j] = 'O'
-				printGrid(testGrid, i, j)
-				fmt.Printf("(%d, %d) would form a loop\n", i, j)
+		if depth <= 0 && nextIndicator != '#' && !isTravelIndicator(nextIndicator) {
+			//Traverse and see what happens if this becomes a blockage
+			gridCopy := dupGrid(grid)
+			gridCopy[candPoint.row][candPoint.col] = '#'
+			_, loop := traverseMaze(gridCopy, 1, (dir+1)%len(directions), pos)
+			if loop != 0 {
 				loopsFound++
 			}
 		}
-	}
 
+		pos = sumPoints(pos, directions[dir])
+	}
 }
 
 func printGrid(grid [][]byte, i int, j int) {
@@ -142,15 +174,15 @@ func wouldCauseLoop(grid [][]byte, i int, j int, dir int) bool {
 	return grid[i][j]&nextIndicator != 0
 }
 
-func findStart(grid [][]byte) (int, int) {
+func findStart(grid [][]byte) Point {
 	for i, row := range grid {
 		for j, char := range row {
 			if char == '^' {
-				return i, j
+				return Point{i, j}
 			}
 		}
 	}
-	return -1, -1
+	return Point{-1, -1}
 }
 
 func parseInput(input []byte) [][]byte {
