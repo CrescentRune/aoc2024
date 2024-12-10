@@ -22,7 +22,7 @@ var directions = []Point{
 }
 
 func main() {
-    input, err := os.ReadFile("input.txt")
+    input, err := os.ReadFile("sample.txt")
 
     if err != nil {
         panic("Oh no file bad!")
@@ -30,39 +30,45 @@ func main() {
 
     grid := parseInput(input)
 
-    p1 := computeTrailheadValues(grid)
+    p1, p2 := computeTrailheadValues(grid)
 
     fmt.Printf("Part 1 solution: %d\n", p1)
+    fmt.Printf("Part 2 solution: %d\n", p2)
 }
 
-func computeTrailheadValues(grid [][]int) int {
+func computeTrailheadValues(grid [][]int) (int, int) {
     sum := 0
+
+    nonUniqueSum := 0
 
     for i, row := range grid {
         for j, val := range row {
             if val == 0 {
                 trailheadSet := make(map[string]bool)
-                walk(grid, Point{i,j}, trailheadSet)
-                fmt.Printf("(%d,%d): Set (len:%d) %v\n", i, j, len(trailheadSet), trailheadSet)
+                nonUniqueSum += walk(grid, Point{i,j}, trailheadSet)
                 sum += len(trailheadSet)
             }
         }
     }
-    return sum
+    return sum, nonUniqueSum
 }
 
-func walk(grid [][]int, pos Point, set map[string]bool) {
+func walk(grid [][]int, pos Point, set map[string]bool) int {
+    sum := 0
     val := grid[pos.row][pos.col]
     if val == 9 {
         strRep := fmt.Sprintf("%d,%d",pos.row, pos.col)
         set[strRep] = true
+        return 1
     }
 
     cands := getNextSteps(grid, pos)
 
     for _, cand := range cands {
-        walk(grid, cand, set)
+        sum += walk(grid, cand, set)
     }
+
+    return sum
 }
 
 func getNextSteps(grid [][]int, pos Point) []Point {
