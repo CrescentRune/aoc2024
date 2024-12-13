@@ -97,10 +97,10 @@ func computeFenceAround(visited map[string]bool, grid [][]byte, i int, j int) in
 		//fences += itemFences
 		corners := findCorners(grid, item[0], item[1])
 		fences += corners
-		fmt.Printf("Item (%c) at (%s) requires %d fences, plot has %d corners\n", grid[item[0]][item[1]], getStrRep(item[0], item[1]), itemFences, corners)
+		//fmt.Printf("Item (%c) at (%s) requires %d fences, plot has %d corners\n", grid[item[0]][item[1]], getStrRep(item[0], item[1]), itemFences, corners)
 	}
 
-	fmt.Printf("Total fencing cost for %c: %d*%d = %d\n", grid[i][j], fences, uniq, fences*uniq)
+	//fmt.Printf("Total fencing cost for %c: %d*%d = %d\n", grid[i][j], fences, uniq, fences*uniq)
 
 	return fences * uniq
 }
